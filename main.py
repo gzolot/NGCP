@@ -1,0 +1,179 @@
+#initialize drone object via mavsdk
+from mavsdk import System
+import asyncio
+
+#global parameters_______________________________________________________________________________________
+#takeoff altitude in meters
+takeoff_altitude = 2.5  
+
+async def initialize_drone():
+    drone = System(mavsdk_server_address='localhost', port=50051)
+    await drone.connect()
+
+    print("Waiting for drone to connect...")
+    async for state in drone.core.connection_state():
+        if state.is_connected:
+            print(f"-- Connected to drone!")
+            break
+
+    print("Waiting for drone to have a global position estimate...")
+    async for health in drone.telemetry.health():
+        if health.is_global_position_ok and health.is_home_position_ok:
+            print("-- Global position estimate OK")
+            break
+
+    #set the takeoff altitude
+    print(f"-- Setting takeoff altitude to {takeoff_altitude} meters")
+    await drone.action.set_takeoff_altitude(takeoff_altitude)
+    
+    return drone
+
+#constantly prints altitude and latitude/longitude of the drone
+async def print_status_text(drone):
+    try:
+        async for altitude in drone.telemetry.position():
+            print(f"-- Current Altitude: {altitude.relative_altitude_m}")
+            print(f"-- Current Position: {altitude.latitude_deg}, {altitude.longitude_deg}")
+            #add delay to print once every 2 seconds
+            await asyncio.sleep(2)
+    except asyncio.CancelledError:
+        return
+
+#function generates a list of coordinates that the drone will follow
+#the list is based on two points that compose two opposite corners of a rectangle
+#the drone will sweep throught the rectangle by following a snake pattern
+#the sweeps argument represents the number of u turns the drone will make so if the value is 2 the drone path will make a single S shape
+#and if the value is 3 the drown will make a w shape
+async def generate_path(start_lat, start_lon, end_lat, end_lon, sweeps, step_size):
+    path = []
+    #generate longitude step size that evenly divides the distance between the two points
+    lon_turn_length = (abs(start_lon - end_lon) / sweeps)
+    if (lon_turn_length // step_size) == 0:
+        lon_step_size = lon_turn_length
+    else:
+        lon_step_size = lon_turn_length/(lon_turn_length // step_size)
+    #print(f"lon_turn_length: {lon_turn_length}, lon_step_size: {lon_step_size}")
+
+    #generate latitude step size that evenly divides the distance between the two points
+    lat_num_steps = (abs(start_lat - end_lat) // step_size)
+    if(lat_num_steps == 0):
+        lat_num_steps = 1
+    lat_step_size = (abs(start_lat - end_lat) / lat_num_steps)
+    #print(f"lat_num_steps: {lat_num_steps}, lat_step_size: {lat_step_size}")
+
+    current_lat = start_lat
+    current_lon = start_lon
+    #generate the first sweep
+    for i in range(0, sweeps*2+1):
+        #print(f"i: {i}")
+        if i % 2 == 0:
+            if current_lat != end_lat:
+                while current_lat < end_lat:
+                    #for j in range(start_lat, end_lat+lat_step_size, lat_step_size):
+                    #print(f"current_lat: {current_lat}, current_lon: {current_lon}")
+                    path.append((current_lat, current_lon))
+                    current_lat += lat_step_size
+                current_lat = end_lat
+            else:
+                while current_lat > start_lat:
+                    #for j in range(end_lat, start_lat-lat_step_size, -lat_step_size):
+                    #print(f"current_lat: {current_lat}, current_lon: {current_lon}")
+                    path.append((current_lat, current_lon))
+                    current_lat -= lat_step_size
+                current_lat = start_lat
+            if i == sweeps*2:
+                    path.append((current_lat, current_lon))
+        else:
+            #print(f"current_lon: {current_lon}, current_lon + lon_turn_length: {current_lon + lon_turn_length}")
+            top_lon = current_lon + lon_turn_length
+            while current_lon < (top_lon):
+                #for j in range(current_lon, current_lon+lon_turn_length+lon_step_size, lon_step_size):
+                #print(f"current_lat: {current_lat}, current_lon: {current_lon}")
+                path.append((current_lat, current_lon))
+                current_lon += lon_step_size
+            current_lon = top_lon
+    return path
+
+#async function that will move drone based on an imput of a bunch of coordinates or a path
+async def move_drone(drone, path):
+    for coord in path:
+        await drone.action.goto_location(coord[0], coord[1], takeoff_altitude, 0)
+        #loop until drone reaches desired location
+        margin_of_error = 0.00001  # Adjust as needed
+        #print(f"-- Waiting for drone to reach {coord}")
+        async for location in drone.telemetry.position():
+            if abs(location.latitude_deg - coord[0]) < margin_of_error and abs(location.longitude_deg - coord[1]) < margin_of_error:
+                print(f"-- Drone reached ({location.latitude_deg}, {location.longitude_deg})")
+                break
+    
+
+async def run():
+
+    drone = await initialize_drone()
+
+    #status_text_task = asyncio.create_task(print_status_text(drone))
+
+    print("-- Arming")
+    await drone.action.arm()
+
+    print("-- Taking off")
+    await drone.action.takeoff()
+
+    #print current drone location once
+    async for location in drone.telemetry.position():
+        print(f"-- Current Position: {location.latitude_deg}, {location.longitude_deg}")
+        break
+
+    #wait until drone reaches takoff altitude
+    async for altitude in drone.telemetry.position():
+        if altitude.relative_altitude_m >= takeoff_altitude:
+            break
+    
+    start_lat = location.latitude_deg
+    start_lon = location.longitude_deg
+    end_lat = start_lat + 0.0005
+    end_lon = start_lon + 0.0005
+    sweeps = 3
+    step_size = 0.0001
+    path = await generate_path(start_lat, start_lon, end_lat, end_lon, sweeps, step_size)
+    print(path)
+    await move_drone(drone, path)
+
+
+    # #utilizing current location to move drone 5 meters to the left
+    # target_longitude = location.longitude_deg - 0.0005
+    # print(f"target_longitude: {target_longitude}")
+    # await drone.action.goto_location(location.latitude_deg, target_longitude, location.absolute_altitude_m, 0)
+
+    # #loop until drone reaches desired location
+    # margin_of_error = 0.00001  # Adjust as needed
+    # print("-- Waiting for drone to reach desired location")
+    # async for location in drone.telemetry.position():
+    #     if abs(location.longitude_deg - target_longitude) < margin_of_error:
+    #         break
+
+    #print current drone location once
+    async for location in drone.telemetry.position():
+        print(f"-- Current Position: {location.latitude_deg}, {location.longitude_deg}")
+        break
+
+    print("-- Landing")
+    await drone.action.land()
+
+    # status_text_task.cancel()
+    # try:
+    #     # Await the task to handle its cancellation
+    #     await status_text_task
+    # except asyncio.CancelledError:
+    #     print("-- print_status_text task cancelled")
+
+if __name__ == "__main__":
+    asyncio.run(run())
+    # start_lat = 0
+    # start_lon = 0
+    # end_lat = 10.000
+    # end_lon = 10.000
+    # sweeps = 3
+    # step_size = 1
+    # path = asyncio.run(generate_path(start_lat, start_lon, end_lat, end_lon, sweeps, step_size))
+    # print(path)
