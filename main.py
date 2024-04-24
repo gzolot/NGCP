@@ -1,10 +1,67 @@
 #initialize drone object via mavsdk
 from mavsdk import System
 import asyncio
+from roboflowoak import RoboflowOak
+import cv2
+import numpy as np
 
 #global parameters_______________________________________________________________________________________
 #takeoff altitude in meters
-takeoff_altitude = 2.5  
+takeoff_altitude = 2.5
+found = False #global for predictions
+
+async def vision():
+    rf = RoboflowOak(model="redsquare-gwdyn", confidence=0.5, overlap=0.5,
+    version="1", api_key="N5Xs9o02pFDsaVc5pjcd", rgb=True,
+    depth=False, device=None, device_name="FRA", blocking=True)
+    # Running our model and displaying the video output with detections
+    timefound = 0
+    while True:
+        #t0 = time.time()
+        # The rf.detect() function runs the model inference
+        result, frame, raw_frame, depth = rf.detect()
+        predictions = result["predictions"]
+        #{
+        #    predictions:
+        #    [ {
+        #        x: (middle),
+        #        y:(middle),
+        #        width: ,
+        #        height: ,
+        #        depth: ###->,
+        #        confidence: ,
+        #        class: ,
+        #        mask: { }
+        #       }
+        #    ]
+        #}
+        #frame - frame after preprocs, with predictions
+        #raw_frame - original frame from your OAK
+        #depth - depth map for raw_frame, center-rectified to the center camera
+        #To access specific values within "predictions" use: [p.json() for p[a] in predictions]
+        # set "a" to the index value you are attempting to access
+        # Example: accessing the "y"-value: [p.json() for p[1] in predictions]
+        
+        # timing: for benchmarking purposes
+        # t = time.time()-t0
+        # print("FPS ", 1/t)
+        #print("PREDICTIONS ", [p.json() for p in predictions])
+        if predictions is not None:
+            if found is True:
+                timefound+=1
+            found = True
+        elif predictions is None:
+            found = False
+            timefound = 0
+        # setting parameters for depth calculation
+        #max_depth = np.amax(depth)
+        #cv2.imshow("depth", depth/max_depth)
+        # displaying the video feed as successive frames
+        #cv2.imshow("frame", frame)
+    
+        # how to close the OAK inference window / stop inference: CTRL+q or CTRL+c
+        if cv2.waitKey(1) == ord('q'):
+            break
 
 async def initialize_drone():
     drone = System(mavsdk_server_address='localhost', port=50051)
