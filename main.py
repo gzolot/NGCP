@@ -213,10 +213,10 @@ async def run():
     start_lat = location.latitude_deg
     start_lon = location.longitude_deg
     print(f"start_lat: {start_lat}, start_lon: {start_lon}")
-    end_lat = start_lat + 10
-    end_lon = start_lon + 10
+    end_lat = start_lat + 5
+    end_lon = start_lon + 5
     sweeps = 3
-    step_size = 0.1
+    step_size = 1
     path = await generate_path(start_lat, start_lon, end_lat, end_lon, sweeps, step_size)
     index = 0
     path_length = len(path)
