@@ -7,7 +7,7 @@ import asyncio
 
 #global parameters_______________________________________________________________________________________
 #takeoff altitude in meters
-takeoff_altitude = 2.5
+takeoff_altitude = 10
 found = False #global for predictions
 
 def vision(result_queue):
