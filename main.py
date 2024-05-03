@@ -204,9 +204,11 @@ async def run():
         break
 
     #wait until drone reaches takoff altitude
-    async for altitude in drone.telemetry.position():
-        if abs(altitude.relative_altitude_m - takeoff_altitude) < 1.0:
-            break
+    # async for altitude in drone.telemetry.position():
+    #     if abs(altitude.relative_altitude_m - takeoff_altitude) < 1.0:
+    #         break
+    #wait for 10 seconds
+    await asyncio.sleep(10)
     
     start_lat = location.latitude_deg
     start_lon = location.longitude_deg
