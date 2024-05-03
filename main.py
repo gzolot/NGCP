@@ -1,16 +1,16 @@
 #initialize drone object via mavsdk
 from mavsdk import System
 import asyncio
-from roboflowoak import RoboflowOak
-import cv2
-import numpy as np
+# from roboflowoak import RoboflowOak
+# import cv2
+# import numpy as np
 
 #global parameters_______________________________________________________________________________________
 #takeoff altitude in meters
 takeoff_altitude = 2.5
 found = False #global for predictions
 
-async def vision():
+def vision(result_queue):
     rf = RoboflowOak(model="redsquare-gwdyn", confidence=0.5, overlap=0.5,
     version="1", api_key="N5Xs9o02pFDsaVc5pjcd", rgb=True,
     depth=False, device=None, device_name="FRA", blocking=True)
@@ -21,6 +21,10 @@ async def vision():
         # The rf.detect() function runs the model inference
         result, frame, raw_frame, depth = rf.detect()
         predictions = result["predictions"]
+
+        #update the x and y coordinates:
+        x,y = 100, 200
+        result_queue.put_nowait((x,y))
         #{
         #    predictions:
         #    [ {
@@ -62,6 +66,14 @@ async def vision():
         # how to close the OAK inference window / stop inference: CTRL+q or CTRL+c
         if cv2.waitKey(1) == ord('q'):
             break
+
+async def coordinate_producer(executor, result_queue):
+    loop = asyncio.get_running_loop()
+    while True:
+        # Wait for new coordinates from the computer vision task
+        x, y = await loop.run_in_executor(executor, result_queue.get)
+        await coordinate_queue.put((x, y))
+
 
 async def initialize_drone():
     drone = System(mavsdk_server_address='localhost', port=50051)
@@ -162,7 +174,17 @@ async def move_drone(drone, path):
             if abs(location.latitude_deg - coord[0]) < margin_of_error and abs(location.longitude_deg - coord[1]) < margin_of_error:
                 print(f"-- Drone reached ({location.latitude_deg}, {location.longitude_deg})")
                 break
-    
+
+#async function that will move the drone to the next location on a path 
+async def move_to_next_location(drone, path, next_index):
+    await drone.action.goto_location(path[next_index][0], path[next_index][1], takeoff_altitude, 0)
+    #loop until drone reaches desired location
+    margin_of_error = 0.00001  # Adjust as needed
+    #print(f"-- Waiting for drone to reach {path[next_index]}")
+    async for location in drone.telemetry.position():
+        if abs(location.latitude_deg - path[next_index][0]) < margin_of_error and abs(location.longitude_deg - path[next_index][1]) < margin_of_error:
+            print(f"-- Drone reached ({location.latitude_deg}, {location.longitude_deg})")
+            break
 
 async def run():
 
@@ -183,7 +205,7 @@ async def run():
 
     #wait until drone reaches takoff altitude
     async for altitude in drone.telemetry.position():
-        if altitude.relative_altitude_m >= takeoff_altitude:
+        if abs(altitude.relative_altitude_m - takeoff_altitude) < 1.0:
             break
     
     start_lat = location.latitude_deg
@@ -193,8 +215,19 @@ async def run():
     sweeps = 3
     step_size = 0.0001
     path = await generate_path(start_lat, start_lon, end_lat, end_lon, sweeps, step_size)
+    index = 0
+    path_length = len(path)
     print(path)
-    await move_drone(drone, path)
+
+    #infinite while loop that moves the drone to the next location on the path
+    while True:
+        #move to next location
+        await move_to_next_location(drone, path, index)
+        index += 1
+        if index == path_length:
+            break
+
+    # await move_drone(drone, path)
 
 
     # #utilizing current location to move drone 5 meters to the left
