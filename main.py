@@ -7,7 +7,8 @@ import asyncio
 
 #global parameters_______________________________________________________________________________________
 #takeoff altitude in meters
-takeoff_altitude = 10
+takeoff_altitude = 5
+flight_height = 15
 found = False #global for predictions
 
 def vision(result_queue):
@@ -176,14 +177,14 @@ async def move_drone(drone, path):
                 break
 
 #async function that will move the drone to the next location on a path 
-async def move_to_next_location(drone, path, next_index):
-    await drone.action.goto_location(path[next_index][0], path[next_index][1], takeoff_altitude, 0)
+async def move_to_next_location(drone, path, next_index, altitude):
+    await drone.action.goto_location(path[next_index][0], path[next_index][1], altitude, 0)
     #loop until drone reaches desired location
     margin_of_error = 0.00001  # Adjust as needed
     #print(f"-- Waiting for drone to reach {path[next_index]}")
     async for location in drone.telemetry.position():
-        if abs(location.latitude_deg - path[next_index][0]) < margin_of_error and abs(location.longitude_deg - path[next_index][1]) < margin_of_error:
-            print(f"-- Drone reached ({location.latitude_deg}, {location.longitude_deg})")
+        if abs(location.latitude_deg - path[next_index][0]) < margin_of_error and abs(location.longitude_deg - path[next_index][1]) < margin_of_error and abs(location.relative_altitude_m - altitude) < 1.0:
+            print(f"-- Drone reached ({location.latitude_deg}, {location.longitude_deg}, {location.relative_altitude_m})")
             break
 
 async def run():
@@ -213,10 +214,10 @@ async def run():
     start_lat = location.latitude_deg
     start_lon = location.longitude_deg
     print(f"start_lat: {start_lat}, start_lon: {start_lon}")
-    end_lat = start_lat + 5
-    end_lon = start_lon + 5
+    end_lat = start_lat + 0.01
+    end_lon = start_lon + 0.01
     sweeps = 3
-    step_size = 1
+    step_size = 0.005
     path = await generate_path(start_lat, start_lon, end_lat, end_lon, sweeps, step_size)
     index = 0
     path_length = len(path)
@@ -225,7 +226,7 @@ async def run():
     #infinite while loop that moves the drone to the next location on the path
     while True:
         #move to next location
-        await move_to_next_location(drone, path, index)
+        await move_to_next_location(drone, path, index, flight_height)
         index += 1
         if index == path_length:
             break
