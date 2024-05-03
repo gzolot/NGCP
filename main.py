@@ -7,8 +7,8 @@ import asyncio
 
 #global parameters_______________________________________________________________________________________
 #takeoff altitude in meters
-takeoff_altitude = 5
-flight_height = 15
+takeoff_altitude = 10
+absolute_altitude = 0
 found = False #global for predictions
 
 def vision(result_queue):
@@ -95,6 +95,11 @@ async def initialize_drone():
     #set the takeoff altitude
     print(f"-- Setting takeoff altitude to {takeoff_altitude} meters")
     await drone.action.set_takeoff_altitude(takeoff_altitude)
+
+    print("fetching amsl altitude at home location......")
+    async for terrain_info in drone.telemetry.home():
+        absolute_altitude = terrain_info.absolute_altitude_m
+        break
     
     return drone
 
@@ -216,6 +221,7 @@ async def run():
     print(f"start_lat: {start_lat}, start_lon: {start_lon}")
     end_lat = start_lat + 0.01
     end_lon = start_lon + 0.01
+    flying_altitude = absolute_altitude + takeoff_altitude
     sweeps = 3
     step_size = 0.005
     path = await generate_path(start_lat, start_lon, end_lat, end_lon, sweeps, step_size)
@@ -226,7 +232,7 @@ async def run():
     #infinite while loop that moves the drone to the next location on the path
     while True:
         #move to next location
-        await move_to_next_location(drone, path, index, flight_height)
+        await move_to_next_location(drone, path, index, flying_altitude)
         index += 1
         if index == path_length:
             break
