@@ -9,6 +9,7 @@ import asyncio
 #takeoff altitude in meters
 takeoff_altitude = 10
 absolute_altitude = 0
+current_altitude = 0
 found = False #global for predictions
 
 def vision(result_queue):
@@ -91,17 +92,32 @@ async def initialize_drone():
         if health.is_global_position_ok and health.is_home_position_ok:
             print("-- Global position estimate OK")
             break
-
-    #set the takeoff altitude
-    print(f"-- Setting takeoff altitude to {takeoff_altitude} meters")
-    await drone.action.set_takeoff_altitude(takeoff_altitude)
-
+    
+    print_altitude_task = asyncio.ensure_future(print_altitude(drone))
+    
     print("fetching amsl altitude at home location......")
     async for terrain_info in drone.telemetry.home():
         absolute_altitude = terrain_info.absolute_altitude_m
         break
+
+    #set the takeoff altitude
+    print(f"-- Setting takeoff altitude to {takeoff_altitude} meters")
+    await drone.action.set_takeoff_altitude(takeoff_altitude)
     
     return drone
+
+
+async def print_altitude(drone):
+    """ Prints the altitude when it changes """
+
+    previous_altitude = None
+
+    async for position in drone.telemetry.position():
+        altitude = round(position.relative_altitude_m)
+        if altitude != previous_altitude:
+            previous_altitude = altitude
+            current_altitude = altitude
+            print(f"Altitude: {altitude}")
 
 #constantly prints altitude and latitude/longitude of the drone
 async def print_status_text(drone):
@@ -221,7 +237,7 @@ async def run():
     print(f"start_lat: {start_lat}, start_lon: {start_lon}")
     end_lat = start_lat + 0.01
     end_lon = start_lon + 0.01
-    flying_altitude = absolute_altitude + takeoff_altitude
+    flying_altitude = absolute_altitude + 20.0
     sweeps = 3
     step_size = 0.005
     path = await generate_path(start_lat, start_lon, end_lat, end_lon, sweeps, step_size)
