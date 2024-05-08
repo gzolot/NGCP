@@ -241,8 +241,8 @@ async def run():
     path_length = len(path)
     print(path)
     
-    print(f"attempting to move drone to lat: {path[index][0]}, lon: {path[index][1]}, altitude: {flying_altitude}")
-    await drone.action.goto_location(path[index][0], path[index][1], flying_altitude, 0)
+    print(f"attempting to move drone to lat: {current_lat + 0.0005}, lon: {current_lon + 0.0005}, altitude: {flying_altitude}")
+    await drone.action.goto_location(current_lat + 0.0005, current_lon + 0.0005, flying_altitude, 0)
     while (1):
         #do nothing
         await asyncio.sleep(1)
