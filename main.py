@@ -8,10 +8,10 @@ import asyncio
 #global parameters_______________________________________________________________________________________
 #takeoff altitude in meters
 takeoff_altitude = 10
-home_altitude = 0
-current_altitude = 0
-current_lat = 0
-current_lon = 0
+home_altitude = 0.0
+current_altitude = 0.0
+current_lat = 0.0
+current_lon = 0.0
 found = False #global for predictions
 
 def vision(result_queue):
@@ -82,8 +82,13 @@ async def coordinate_producer(executor, result_queue):
 async def initialize_drone():
     global takeoff_altitude
     global home_altitude
-    drone = System(mavsdk_server_address='localhost', port=50051)
-    await drone.connect()
+    #local initialization
+    drone = System()
+    await drone.connect(system_address="udp://:14540")
+
+    #nano initialization
+    # drone = System(mavsdk_server_address='localhost', port=50051)
+    # await drone.connect()
 
     print("Waiting for drone to connect...")
     async for state in drone.core.connection_state():
@@ -119,16 +124,15 @@ async def print_altitude(drone):
     global current_lon
     rounded_previous_altitude = None
     rounded_altitude = None
-
     async for position in drone.telemetry.position():
         altitude = position.relative_altitude_m
         rounded_altitude = round(altitude)
         if rounded_altitude != rounded_previous_altitude:
             rounded_previous_altitude = rounded_altitude
-            current_altitude = altitude
-            current_lat = position.latitude_deg
-            current_lon = position.longitude_deg
             print(f"Altitude: {altitude}\tLatitude: {position.latitude_deg}\tLongitude: {position.longitude_deg}")
+        current_altitude = altitude
+        current_lat = position.latitude_deg
+        current_lon = position.longitude_deg
 #constantly prints altitude and latitude/longitude of the drone
 
 #function generates a list of coordinates that the drone will follow
@@ -150,9 +154,7 @@ async def generate_path(start_lat, start_lon, end_lat, end_lon, sweeps, step_siz
     lat_num_steps = (abs(start_lat - end_lat) // step_size)
     if(lat_num_steps == 0):
         lat_num_steps = 1
-    print(f"latitude num steps is {lat_num_steps}")
     lat_step_size = (abs(start_lat - end_lat) / lat_num_steps)
-    print(f"latitude step size is {lat_step_size}")
     #print(f"lat_num_steps: {lat_num_steps}, lat_step_size: {lat_step_size}")
 
     current_lat = start_lat
@@ -215,7 +217,7 @@ async def move_to_next_location(drone, path, next_index, altitude):
     await drone.action.goto_location(path[next_index][0], path[next_index][1], altitude, 0)
     #loop until drone reaches desired location
     margin_of_error = 0.00003  # Adjust as needed
-    #print(f"-- Waiting for drone to reach {path[next_index]}")
+    print(f"-- Waiting for drone to reach {path[next_index]}")
 
     #utilizing global variables
     while True:
