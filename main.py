@@ -249,6 +249,9 @@ async def run():
     
     print(f"attempting to move drone to lat: {path[index][0]}, lon: {path[index][1]}, altitude: {flying_altitude}")
     await drone.action.goto_location(path[index][0], path[index][1], flying_altitude, 0)
+    while (1):
+        #do nothing
+        await asyncio.sleep(1)
 
     #infinite while loop that moves the drone to the next location on the path
     # while True:
