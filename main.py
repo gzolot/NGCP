@@ -150,6 +150,7 @@ async def generate_path(start_lat, start_lon, end_lat, end_lon, sweeps, step_siz
     lat_num_steps = (abs(start_lat - end_lat) // step_size)
     if(lat_num_steps == 0):
         lat_num_steps = 1
+    print(f"latitude num steps is {lat_num_steps}")
     lat_step_size = (abs(start_lat - end_lat) / lat_num_steps)
     print(f"latitude step size is {lat_step_size}")
     #print(f"lat_num_steps: {lat_num_steps}, lat_step_size: {lat_step_size}")
@@ -192,7 +193,7 @@ async def move_drone(drone, path):
     for coord in path:
         await drone.action.goto_location(coord[0], coord[1], takeoff_altitude, 0)
         #loop until drone reaches desired location
-        margin_of_error = 0.00001  # Adjust as needed
+        margin_of_error = 0.00002  # Adjust as needed
         #print(f"-- Waiting for drone to reach {coord}")
         #utlizing global variables
         while True:
@@ -248,8 +249,8 @@ async def run():
     #wait for 10 seconds
     await asyncio.sleep(10)
     
-    start_lat = location.latitude_deg
-    start_lon = location.longitude_deg
+    start_lat = current_lat
+    start_lon = current_lon
     print(f"start_lat: {start_lat}, start_lon: {start_lon}")
     end_lat = start_lat + 0.001
     end_lon = start_lon + 0.001
