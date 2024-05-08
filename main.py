@@ -80,6 +80,8 @@ async def coordinate_producer(executor, result_queue):
 
 
 async def initialize_drone():
+    global takeoff_altitude
+    global home_altitude
     drone = System(mavsdk_server_address='localhost', port=50051)
     await drone.connect()
 
@@ -112,6 +114,9 @@ async def initialize_drone():
 async def print_altitude(drone):
     """ Prints the altitude when it changes """
 
+    global current_altitude
+    global current_lat
+    global current_lon
     rounded_previous_altitude = None
     rounded_altitude = None
 
@@ -205,6 +210,10 @@ async def move_to_next_location(drone, path, next_index, altitude):
             break
 
 async def run():
+    global home_altitude
+    global current_altitude
+    global current_lat
+    global current_lon 
 
     drone = await initialize_drone()
 
