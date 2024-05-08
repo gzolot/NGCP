@@ -151,6 +151,7 @@ async def generate_path(start_lat, start_lon, end_lat, end_lon, sweeps, step_siz
     if(lat_num_steps == 0):
         lat_num_steps = 1
     lat_step_size = (abs(start_lat - end_lat) / lat_num_steps)
+    print(f"latitude step size is {lat_step_size}")
     #print(f"lat_num_steps: {lat_num_steps}, lat_step_size: {lat_step_size}")
 
     current_lat = start_lat
@@ -256,23 +257,23 @@ async def run():
     sweeps = 3
     step_size = 0.0005
     path = await generate_path(start_lat, start_lon, end_lat, end_lon, sweeps, step_size)
-    index = 0
+    index = 1
     path_length = len(path)
     print(path)
     
-    print(f"attempting to move drone to lat: {current_lat + 0.0005}, lon: {current_lon + 0.0005}, altitude: {flying_altitude}")
-    await drone.action.goto_location(current_lat + 0.0005, current_lon + 0.0005, flying_altitude, 0)
-    while (1):
-        #do nothing
-        await asyncio.sleep(1)
+    # print(f"attempting to move drone to lat: {current_lat + 0.0005}, lon: {current_lon + 0.0005}, altitude: {flying_altitude}")
+    # await drone.action.goto_location(current_lat + 0.0005, current_lon + 0.0005, flying_altitude, 0)
+    # while (1):
+    #     #do nothing
+    #     await asyncio.sleep(1)
 
-    #infinite while loop that moves the drone to the next location on the path
-    # while True:
-    #     #move to next location
-    #     await move_to_next_location(drone, path, index, flying_altitude)
-    #     index += 1
-    #     if index == path_length:
-    #         break
+    infinite while loop that moves the drone to the next location on the path
+    while True:
+        #move to next location
+        await move_to_next_location(drone, path, index, flying_altitude)
+        index += 1
+        if index == path_length:
+            break
 
     # await move_drone(drone, path)
 
