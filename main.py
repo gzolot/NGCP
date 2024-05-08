@@ -1,6 +1,15 @@
 #initialize drone object via mavsdk
 from mavsdk import System
 import asyncio
+
+#initialize GCS
+# from datetime import datetime
+# from Telemetry.RabbitMQ import TelemetryRabbitMQ
+# from Types.Telemetry import Telemetry
+# from Types.Geolocation import Coordinate
+# import time
+
+#initialize computer vision object via roboflowoak
 # from roboflowoak import RoboflowOak
 # import cv2
 # import numpy as np
@@ -12,6 +21,11 @@ home_altitude = 0.0
 current_altitude = 0.0
 current_lat = 0.0
 current_lon = 0.0
+current_pitch = 0.0
+current_yaw = 0.0
+current_roll = 0.0
+current_speed = 0.0
+current_battery = 0.0
 found = False #global for predictions
 
 def vision(result_queue):
@@ -135,6 +149,23 @@ async def print_altitude(drone):
         current_lon = position.longitude_deg
 #constantly prints altitude and latitude/longitude of the drone
 
+async def print_attitude(drone):
+    global current_pitch, current_yaw, current_roll
+    async for attitude in drone.telemetry.attitude_euler():
+        current_pitch = attitude.pitch_deg
+        current_yaw = attitude.yaw_deg
+        current_roll = attitude.roll_deg
+        print(f"Pitch: {current_pitch}, Yaw: {current_yaw}, Roll: {current_roll}")
+
+async def print_battery_and_speed(drone):
+    global current_speed, current_battery
+    async for battery in drone.telemetry.battery():
+        current_battery = battery.remaining_percent * 100
+        # print(f"Battery life: {current_battery}%")
+    async for velocity in drone.telemetry.velocity_ned():
+        current_speed = (velocity.north_m_s**2 + velocity.east_m_s**2 + velocity.down_m_s**2) ** 0.5
+        # print(f"Speed: {current_speed} m/s")
+
 #function generates a list of coordinates that the drone will follow
 #the list is based on two points that compose two opposite corners of a rectangle
 #the drone will sweep throught the rectangle by following a snake pattern
@@ -195,7 +226,7 @@ async def move_drone(drone, path):
     for coord in path:
         await drone.action.goto_location(coord[0], coord[1], takeoff_altitude, 0)
         #loop until drone reaches desired location
-        margin_of_error = 0.00002  # Adjust as needed
+        margin_of_error = 0.00003  # Adjust as needed
         #print(f"-- Waiting for drone to reach {coord}")
         #utlizing global variables
         while True:
@@ -239,6 +270,12 @@ async def run():
     global current_altitude
     global current_lat
     global current_lon 
+    global current_pitch
+    global current_yaw
+    global current_roll
+    global current_speed
+    global current_battery
+    global found
 
     drone = await initialize_drone()
 
@@ -274,7 +311,12 @@ async def run():
     index = 1
     path_length = len(path)
     print(path)
-    
+
+    #telemetry setup
+    tel = TelemetryRabbitMQ("ERU", "localhost")
+
+    # asyncio.ensure_future(move_drone(drone, path))
+
     # print(f"attempting to move drone to lat: {current_lat + 0.0005}, lon: {current_lon + 0.0005}, altitude: {flying_altitude}")
     # await drone.action.goto_location(current_lat + 0.0005, current_lon + 0.0005, flying_altitude, 0)
     # while (1):
@@ -283,7 +325,21 @@ async def run():
 
     # infinite while loop that moves the drone to the next location on the path
     while True:
-        #move to next location
+
+        #update telemetry data
+        # data = Telemetry(
+        #     pitch=current_pitch,
+        #     yaw=current_yaw,
+        #     roll=current_roll,
+        #     speed=current_speed,
+        #     altitude=current_altitude,
+        #     batteryLife=current_battery,
+        #     currentCoordinate=Coordinate(latitude=current_lat, longitude=current_lon),
+        #     lastUpdated=datetime.now()
+        # )
+
+        
+
         await move_to_next_location(drone, path, index, flying_altitude)
         index += 1
         if index == path_length:
