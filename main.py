@@ -110,12 +110,14 @@ async def initialize_drone():
 async def print_altitude(drone):
     """ Prints the altitude when it changes """
 
-    previous_altitude = None
+    rounded_previous_altitude = None
+    rounded_altitude = None
 
     async for position in drone.telemetry.position():
-        altitude = round(position.relative_altitude_m)
-        if altitude != previous_altitude:
-            previous_altitude = altitude
+        altitude = position.relative_altitude_m
+        rounded_altitude = round(altitude)
+        if rounded_altitude != rounded_previous_altitude:
+            rounded_previous_altitude = rounded_altitude
             current_altitude = altitude
             print(f"Altitude: {altitude}")
 
@@ -244,14 +246,17 @@ async def run():
     index = 0
     path_length = len(path)
     print(path)
+    
+    print(f"attempting to move drone to lat: {path[index][0]}, lon: {path[index][1]}, altitude: {flying_altitude}")
+    await drone.action.goto_location(path[index][0], path[index][1], flying_altitude, 0)
 
     #infinite while loop that moves the drone to the next location on the path
-    while True:
-        #move to next location
-        await move_to_next_location(drone, path, index, flying_altitude)
-        index += 1
-        if index == path_length:
-            break
+    # while True:
+    #     #move to next location
+    #     await move_to_next_location(drone, path, index, flying_altitude)
+    #     index += 1
+    #     if index == path_length:
+    #         break
 
     # await move_drone(drone, path)
 
