@@ -219,12 +219,12 @@ async def move_to_next_location(drone, path, next_index, altitude):
 
     #utilizing global variables
     while True:
-            # Use global variables updated by print_altitude
-            global current_lat, current_lon
-            if abs(current_lat - coord[0]) < margin_of_error and abs(current_lon - coord[1]) < margin_of_error:
-                print(f"-- Drone reached ({current_lat}, {current_lon})")
-                break
-            await asyncio.sleep(0.5)  
+        # Use global variables updated by print_altitude
+        global current_lat, current_lon
+        if abs(current_lat - path[next_index][0]) < margin_of_error and abs(current_lon - path[next_index][1]) < margin_of_error:
+            print(f"-- Drone reached ({current_lat}, {current_lon})")
+            break
+        await asyncio.sleep(0.5)  
 
     #not utilizing globals
     # async for location in drone.telemetry.position():
