@@ -214,12 +214,23 @@ async def move_drone(drone, path):
 async def move_to_next_location(drone, path, next_index, altitude):
     await drone.action.goto_location(path[next_index][0], path[next_index][1], altitude, 0)
     #loop until drone reaches desired location
-    margin_of_error = 0.00001  # Adjust as needed
+    margin_of_error = 0.00003  # Adjust as needed
     #print(f"-- Waiting for drone to reach {path[next_index]}")
-    async for location in drone.telemetry.position():
-        if abs(location.latitude_deg - path[next_index][0]) < margin_of_error and abs(location.longitude_deg - path[next_index][1]) < margin_of_error and abs(location.relative_altitude_m - altitude) < 1.0:
-            print(f"-- Drone reached ({location.latitude_deg}, {location.longitude_deg}, {location.relative_altitude_m})")
-            break
+
+    #utilizing global variables
+    while True:
+            # Use global variables updated by print_altitude
+            global current_lat, current_lon
+            if abs(current_lat - coord[0]) < margin_of_error and abs(current_lon - coord[1]) < margin_of_error:
+                print(f"-- Drone reached ({current_lat}, {current_lon})")
+                break
+            await asyncio.sleep(0.5)  
+
+    #not utilizing globals
+    # async for location in drone.telemetry.position():
+    #     if abs(location.latitude_deg - path[next_index][0]) < margin_of_error and abs(location.longitude_deg - path[next_index][1]) < margin_of_error and abs(location.relative_altitude_m - altitude) < 1.0:
+    #         print(f"-- Drone reached ({location.latitude_deg}, {location.longitude_deg}, {location.relative_altitude_m})")
+    #         break
 
 async def run():
     global home_altitude
