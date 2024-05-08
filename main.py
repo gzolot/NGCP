@@ -8,8 +8,10 @@ import asyncio
 #global parameters_______________________________________________________________________________________
 #takeoff altitude in meters
 takeoff_altitude = 10
-absolute_altitude = 0
+home_altitude = 0
 current_altitude = 0
+current_lat = 0
+current_lon = 0
 found = False #global for predictions
 
 def vision(result_queue):
@@ -97,7 +99,7 @@ async def initialize_drone():
     
     print("fetching amsl altitude at home location......")
     async for terrain_info in drone.telemetry.home():
-        absolute_altitude = terrain_info.absolute_altitude_m
+        home_altitude = terrain_info.absolute_altitude_m
         break
 
     #set the takeoff altitude
@@ -119,18 +121,10 @@ async def print_altitude(drone):
         if rounded_altitude != rounded_previous_altitude:
             rounded_previous_altitude = rounded_altitude
             current_altitude = altitude
-            print(f"Altitude: {altitude}")
-
+            current_lat = position.latitude_deg
+            current_lon = position.longitude_deg
+            print(f"Altitude: {altitude}\tLatitude: {position.latitude_deg}\tLongitude: {position.longitude_deg}")
 #constantly prints altitude and latitude/longitude of the drone
-async def print_status_text(drone):
-    try:
-        async for altitude in drone.telemetry.position():
-            print(f"-- Current Altitude: {altitude.relative_altitude_m}")
-            print(f"-- Current Position: {altitude.latitude_deg}, {altitude.longitude_deg}")
-            #add delay to print once every 2 seconds
-            await asyncio.sleep(2)
-    except asyncio.CancelledError:
-        return
 
 #function generates a list of coordinates that the drone will follow
 #the list is based on two points that compose two opposite corners of a rectangle
@@ -239,7 +233,7 @@ async def run():
     print(f"start_lat: {start_lat}, start_lon: {start_lon}")
     end_lat = start_lat + 0.01
     end_lon = start_lon + 0.01
-    flying_altitude = absolute_altitude + 20.0
+    flying_altitude = home_altitude + 30.0
     sweeps = 3
     step_size = 0.005
     path = await generate_path(start_lat, start_lon, end_lat, end_lon, sweeps, step_size)
