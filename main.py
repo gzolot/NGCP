@@ -267,7 +267,7 @@ async def run():
     #     #do nothing
     #     await asyncio.sleep(1)
 
-    infinite while loop that moves the drone to the next location on the path
+    # infinite while loop that moves the drone to the next location on the path
     while True:
         #move to next location
         await move_to_next_location(drone, path, index, flying_altitude)
