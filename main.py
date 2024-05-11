@@ -52,12 +52,12 @@ def vision(queue):
 
         
         #update the x and y coordinates:
+        for p in predictions:
+            x = p.json()['x']
+            y = p.json()['y']
 
-        x = p.json()['x']
-        y = p.json()['y']
-
-        if p.json()['class'] == "RedSquare":
-            queue.put_nowait((x,y))
+            if p.json()['class'] == "RedSquare":
+                queue.put_nowait((x,y))
         #{
         #    predictions:
         #    [ {
@@ -83,13 +83,17 @@ def vision(queue):
         # t = time.time()-t0
         # print("FPS ", 1/t)
         #print("PREDICTIONS ", [p.json() for p in predictions])
-        if predictions is not None:
-            if found is True:
-                timefound+=1
-            found = True
-        elif predictions is None:
-            found = False
-            timefound = 0
+
+
+        # if predictions is not None:
+        #     if found is True:
+        #         timefound+=1
+        #     found = True
+        # elif predictions is None:
+        #     found = False
+        #     timefound = 0
+
+        
         # setting parameters for depth calculation
         #max_depth = np.amax(depth)
         #cv2.imshow("depth", depth/max_depth)
