@@ -116,7 +116,7 @@ def vision2(queue):
         predictions = result["predictions"]
         
         t = time.time()-t0
-        print("INFERENCE TIME IN MS ", 1/t)
+        # print("INFERENCE TIME IN MS ", 1/t)
         
         for p in predictions:
             x = p.json()['x']
@@ -125,7 +125,7 @@ def vision2(queue):
                 queue.put_nowait((x,y))
             width = p.json()['width']
             height = p.json()['height']
-            print("Center X:", x, "Center Y:", y, "Width:", width, "Height:", height)
+            # print("Center X:", x, "Center Y:", y, "Width:", width, "Height:", height)
         
         cv2.imshow("frame", frame) 
         if cv2.waitKey(1) == ord('q'):
