@@ -29,7 +29,7 @@ current_battery = 0.0
 current_heading = 0.0
 found = False #global for predictions
 
-def vision(result_queue):
+def vision(queue):
     rf = RoboflowOak(model="redsquare-gwdyn", confidence=0.5, overlap=0.5,
     version="1", api_key="N5Xs9o02pFDsaVc5pjcd", rgb=True,
     depth=False, device=None, device_name="FRA", blocking=True)
@@ -43,7 +43,7 @@ def vision(result_queue):
 
         #update the x and y coordinates:
         x,y = 100, 200
-        result_queue.put_nowait((x,y))
+        queue.put_nowait((x,y))
         #{
         #    predictions:
         #    [ {
@@ -85,14 +85,6 @@ def vision(result_queue):
         # how to close the OAK inference window / stop inference: CTRL+q or CTRL+c
         if cv2.waitKey(1) == ord('q'):
             break
-
-async def coordinate_producer(executor, result_queue):
-    loop = asyncio.get_running_loop()
-    while True:
-        # Wait for new coordinates from the computer vision task
-        x, y = await loop.run_in_executor(executor, result_queue.get)
-        await coordinate_queue.put((x, y))
-
 
 async def initialize_drone():
     global takeoff_altitude
@@ -327,11 +319,11 @@ async def run():
 
     drone_move_task = asyncio.ensure_future(move_drone(drone, path[1:], flying_altitude))
 
-    # print(f"attempting to move drone to lat: {current_lat + 0.0005}, lon: {current_lon + 0.0005}, altitude: {flying_altitude}")
-    # await drone.action.goto_location(current_lat + 0.0005, current_lon + 0.0005, flying_altitude, 0)
-    # while (1):
-    #     #do nothing
-    #     await asyncio.sleep(1)
+    #initialize vision in seperate thread and coordinate queue
+    coordinate_queue = asyncio.Queue()
+    executor = ThreadPoolExecutor(max_workers=1)
+    loop = asyncio.get_running_loop()
+    loop.run_in_executor(executor, vision, coordinate_queue)
 
     # infinite while loop that moves the drone to the next location on the path
     while True:
@@ -352,8 +344,13 @@ async def run():
         if(drone_move_task.done()):
             print("drone move task done")
             break
+        
+        if not coordinate_queue.empty():
+                x, y = await coordinate_queue.get()
+                print(f"Received coordinates: x={x}, y={y}")
+
         await asyncio.sleep(1)
-        print(f"current_lat: {current_lat}, current_lon: {current_lon}, current_altitude: {current_altitude}, current_pitch: {current_pitch}, current_yaw: {current_yaw}, current_roll: {current_roll}, current_speed: {current_speed}, current_battery: {current_battery}")
+        # print(f"current_lat: {current_lat}, current_lon: {current_lon}, current_altitude: {current_altitude}, current_pitch: {current_pitch}, current_yaw: {current_yaw}, current_roll: {current_roll}, current_speed: {current_speed}, current_battery: {current_battery}")
 
         # await move_to_next_location(drone, path, index, flying_altitude)
         # index += 1
