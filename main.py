@@ -1,6 +1,8 @@
 #initialize drone object via mavsdk
 from mavsdk import System
 import asyncio
+import time
+from concurrent.futures import ThreadPoolExecutor
 
 #initialize GCS
 # from datetime import datetime
@@ -10,9 +12,9 @@ import asyncio
 # import time
 
 #initialize computer vision object via roboflowoak
-# from roboflowoak import RoboflowOak
-# import cv2
-# import numpy as np
+from roboflowoak import RoboflowOak
+import cv2
+import numpy as np
 
 #global parameters_______________________________________________________________________________________
 #takeoff altitude in meters
@@ -29,6 +31,13 @@ current_battery = 0.0
 current_heading = 0.0
 found = False #global for predictions
 
+def mock_vision(queue):
+    while True:
+        x,y = 100, 200
+        queue.put_nowait((x,y))
+        #synchronous wait for 30 seconds
+        time.sleep(30)
+
 def vision(queue):
     rf = RoboflowOak(model="redsquare-gwdyn", confidence=0.5, overlap=0.5,
     version="1", api_key="N5Xs9o02pFDsaVc5pjcd", rgb=True,
@@ -41,9 +50,14 @@ def vision(queue):
         result, frame, raw_frame, depth = rf.detect()
         predictions = result["predictions"]
 
+        
         #update the x and y coordinates:
-        x,y = 100, 200
-        queue.put_nowait((x,y))
+
+        x = p.json()['x']
+        y = p.json()['y']
+
+        if p.json()['class'] == "RedSquare":
+            queue.put_nowait((x,y))
         #{
         #    predictions:
         #    [ {
@@ -90,12 +104,12 @@ async def initialize_drone():
     global takeoff_altitude
     global home_altitude
     #local initialization
-    drone = System()
-    await drone.connect(system_address="udp://:14540")
+    # drone = System()
+    # await drone.connect(system_address="udp://:14540")
 
     #nano initialization
-    # drone = System(mavsdk_server_address='localhost', port=50051)
-    # await drone.connect()
+    drone = System(mavsdk_server_address='localhost', port=50051)
+    await drone.connect()
 
     print("Waiting for drone to connect...")
     async for state in drone.core.connection_state():
