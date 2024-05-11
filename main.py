@@ -370,7 +370,7 @@ async def run():
     executor = ThreadPoolExecutor(max_workers=1)
     loop = asyncio.get_running_loop()
     print("--------------------attempting to run vision")
-    loop.run_in_executor(executor, vision, coordinate_queue)
+    loop.run_in_executor(executor, vision2, coordinate_queue)
 
     # infinite while loop that moves the drone to the next location on the path
     while True:
