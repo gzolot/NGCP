@@ -123,6 +123,7 @@ def vision2(queue):
             y = p.json()['y']
             if p.json()['class'] == "RedSquare":
                 queue.put_nowait((x,y))
+                print(hello)
             width = p.json()['width']
             height = p.json()['height']
             # print("Center X:", x, "Center Y:", y, "Width:", width, "Height:", height)
