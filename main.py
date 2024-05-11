@@ -93,7 +93,7 @@ def vision(queue):
         #     found = False
         #     timefound = 0
 
-        
+
         # setting parameters for depth calculation
         #max_depth = np.amax(depth)
         #cv2.imshow("depth", depth/max_depth)
@@ -173,7 +173,7 @@ async def print_attitude(drone):
 
 async def print_heading(drone):
     global current_heading
-    async for heading in drone.telemetry.heading():
+    async for heading in drone.telemetry.heading_deg():
         current_heading = heading.heading
         # print(f"Heading: {current_heading}")
 
@@ -321,7 +321,7 @@ async def run():
     
     start_lat = current_lat
     start_lon = current_lon
-    print(f"start_lat: {start_lat}, start_lon: {start_lon}")
+    # print(f"start_lat: {start_lat}, start_lon: {start_lon}")
     end_lat = start_lat + 0.001
     end_lon = start_lon + 0.001
     flying_altitude = home_altitude + 30.0
@@ -330,7 +330,7 @@ async def run():
     path = await generate_path(start_lat, start_lon, end_lat, end_lon, sweeps, step_size)
     index = 1
     path_length = len(path)
-    print(path)
+    # print(path)
 
     #telemetry setup
     #tel = TelemetryRabbitMQ("ERU", "localhost")
@@ -341,6 +341,7 @@ async def run():
     coordinate_queue = asyncio.Queue()
     executor = ThreadPoolExecutor(max_workers=1)
     loop = asyncio.get_running_loop()
+    print("--------------------attempting to run vision")
     loop.run_in_executor(executor, vision, coordinate_queue)
 
     # infinite while loop that moves the drone to the next location on the path
