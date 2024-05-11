@@ -26,6 +26,7 @@ current_yaw = 0.0
 current_roll = 0.0
 current_speed = 0.0
 current_battery = 0.0
+current_heading = 0.0
 found = False #global for predictions
 
 def vision(result_queue):
@@ -117,6 +118,9 @@ async def initialize_drone():
             break
     
     print_altitude_task = asyncio.ensure_future(print_altitude(drone))
+    print_attitude_task = asyncio.ensure_future(print_attitude(drone))
+    print_battery_and_speed_task = asyncio.ensure_future(print_battery_and_speed(drone))
+    print_heading_task = asyncio.ensure_future(print_heading(drone))
     
     print("fetching amsl altitude at home location......")
     async for terrain_info in drone.telemetry.home():
@@ -143,7 +147,7 @@ async def print_altitude(drone):
         rounded_altitude = round(altitude)
         if rounded_altitude != rounded_previous_altitude:
             rounded_previous_altitude = rounded_altitude
-            print(f"Altitude: {altitude}\tLatitude: {position.latitude_deg}\tLongitude: {position.longitude_deg}")
+            # print(f"Altitude: {altitude}\tLatitude: {position.latitude_deg}\tLongitude: {position.longitude_deg}")
         current_altitude = altitude
         current_lat = position.latitude_deg
         current_lon = position.longitude_deg
@@ -155,7 +159,13 @@ async def print_attitude(drone):
         current_pitch = attitude.pitch_deg
         current_yaw = attitude.yaw_deg
         current_roll = attitude.roll_deg
-        print(f"Pitch: {current_pitch}, Yaw: {current_yaw}, Roll: {current_roll}")
+        # print(f"Pitch: {current_pitch}, Yaw: {current_yaw}, Roll: {current_roll}")
+
+async def print_heading(drone):
+    global current_heading
+    async for heading in drone.telemetry.heading():
+        current_heading = heading.heading
+        # print(f"Heading: {current_heading}")
 
 async def print_battery_and_speed(drone):
     global current_speed, current_battery
@@ -222,12 +232,12 @@ async def generate_path(start_lat, start_lon, end_lat, end_lon, sweeps, step_siz
     return path
 
 #async function that will move drone based on an imput of a bunch of coordinates or a path
-async def move_drone(drone, path):
+async def move_drone(drone, path, altitude):
     for coord in path:
-        await drone.action.goto_location(coord[0], coord[1], takeoff_altitude, 0)
+        await drone.action.goto_location(coord[0], coord[1], altitude, 0)
         #loop until drone reaches desired location
         margin_of_error = 0.00003  # Adjust as needed
-        #print(f"-- Waiting for drone to reach {coord}")
+        print(f"-- Waiting for drone to reach {coord}")
         #utlizing global variables
         while True:
             # Use global variables updated by print_altitude
@@ -313,9 +323,9 @@ async def run():
     print(path)
 
     #telemetry setup
-    tel = TelemetryRabbitMQ("ERU", "localhost")
+    #tel = TelemetryRabbitMQ("ERU", "localhost")
 
-    # asyncio.ensure_future(move_drone(drone, path))
+    drone_move_task = asyncio.ensure_future(move_drone(drone, path[1:], flying_altitude))
 
     # print(f"attempting to move drone to lat: {current_lat + 0.0005}, lon: {current_lon + 0.0005}, altitude: {flying_altitude}")
     # await drone.action.goto_location(current_lat + 0.0005, current_lon + 0.0005, flying_altitude, 0)
@@ -337,13 +347,18 @@ async def run():
         #     currentCoordinate=Coordinate(latitude=current_lat, longitude=current_lon),
         #     lastUpdated=datetime.now()
         # )
+        # tel.publish(data)
 
-        
-
-        await move_to_next_location(drone, path, index, flying_altitude)
-        index += 1
-        if index == path_length:
+        if(drone_move_task.done()):
+            print("drone move task done")
             break
+        await asyncio.sleep(1)
+        print(f"current_lat: {current_lat}, current_lon: {current_lon}, current_altitude: {current_altitude}, current_pitch: {current_pitch}, current_yaw: {current_yaw}, current_roll: {current_roll}, current_speed: {current_speed}, current_battery: {current_battery}")
+
+        # await move_to_next_location(drone, path, index, flying_altitude)
+        # index += 1
+        # if index == path_length:
+        #     break
 
     # await move_drone(drone, path)
 
