@@ -315,7 +315,7 @@ async def run():
     end_lat = start_lat + 0.001
     end_lon = start_lon + 0.001
     flying_altitude = home_altitude + 30.0
-    sweeps = 3
+    sweeps = 4
     step_size = 0.0005
     path = await generate_path(start_lat, start_lon, end_lat, end_lon, sweeps, step_size)
     index = 1
@@ -353,7 +353,7 @@ async def run():
             print("drone move task done")
             break
         await asyncio.sleep(1)
-        print(f"current_lat: {current_lat}, current_lon: {current_lon}, current_altitude: {current_altitude}, current_pitch: {current_pitch}, current_yaw: {current_yaw}, current_roll: {current_roll}, current_speed: {current_speed}, current_battery: {current_battery}")
+        # print(f"current_lat: {current_lat}, current_lon: {current_lon}, current_altitude: {current_altitude}, current_pitch: {current_pitch}, current_yaw: {current_yaw}, current_roll: {current_roll}, current_speed: {current_speed}, current_battery: {current_battery}")
 
         # await move_to_next_location(drone, path, index, flying_altitude)
         # index += 1
