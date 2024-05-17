@@ -16,8 +16,9 @@ import asyncio
 
 #global parameters_______________________________________________________________________________________
 #takeoff altitude in meters
-takeoff_altitude = 10
+takeoff_altitude = 2
 home_altitude = 0.0
+relative_flight_altitude = 2
 current_altitude = 0.0
 current_lat = 0.0
 current_lon = 0.0
@@ -27,6 +28,7 @@ current_roll = 0.0
 current_speed = 0.0
 current_battery = 0.0
 current_heading = 0.0
+pause_event = asyncio.Event()
 found = False #global for predictions
 
 def vision(result_queue):
@@ -164,7 +166,7 @@ async def print_attitude(drone):
 async def print_heading(drone):
     global current_heading
     async for heading in drone.telemetry.heading():
-        current_heading = heading.heading
+        current_heading = heading.heading_deg
         # print(f"Heading: {current_heading}")
 
 async def print_battery_and_speed(drone):
@@ -245,6 +247,9 @@ async def move_drone(drone, path, altitude):
             if abs(current_lat - coord[0]) < margin_of_error and abs(current_lon - coord[1]) < margin_of_error:
                 print(f"-- Drone reached ({current_lat}, {current_lon})")
                 break
+            # print("before pause")
+            # await pause_event.wait()
+            # print("after pause")
             await asyncio.sleep(0.5)  # Pause briefly to allow for updates
         
         #not utilizing global variables 
@@ -275,6 +280,18 @@ async def move_to_next_location(drone, path, next_index, altitude):
     #         print(f"-- Drone reached ({location.latitude_deg}, {location.longitude_deg}, {location.relative_altitude_m})")
     #         break
 
+async def monitor_flight_mode(drone):
+    async for flight_mode in drone.telemetry.flight_mode():
+        print(f"Current flight mode: {flight_mode}")
+        if flight_mode in [drone.telemetry.FlightMode.POSCTL,
+                           drone.telemetry.FlightMode.STABILIZED,
+                           drone.telemetry.FlightMode.ALTCTL,
+                           drone.telemetry.FlightMode.MANUAL,
+                           drone.telemetry.FlightMode.ACRO]:
+            print("-- Manual takeover detected, pausing mission")
+            pause_event.clear()  # Pause the movement
+            return
+
 async def run():
     global home_altitude
     global current_altitude
@@ -286,10 +303,14 @@ async def run():
     global current_speed
     global current_battery
     global found
+    global relative_flight_altitude
 
     drone = await initialize_drone()
 
     #status_text_task = asyncio.create_task(print_status_text(drone))
+
+    #sleep for 1 minute
+    # await asyncio.sleep(60)
 
     print("-- Arming")
     await drone.action.arm()
@@ -314,8 +335,8 @@ async def run():
     print(f"start_lat: {start_lat}, start_lon: {start_lon}")
     end_lat = start_lat + 0.001
     end_lon = start_lon + 0.001
-    flying_altitude = home_altitude + 30.0
-    sweeps = 4
+    flying_altitude = home_altitude + relative_flight_altitude
+    sweeps = 3
     step_size = 0.0005
     path = await generate_path(start_lat, start_lon, end_lat, end_lon, sweeps, step_size)
     index = 1
@@ -325,7 +346,9 @@ async def run():
     #telemetry setup
     #tel = TelemetryRabbitMQ("ERU", "localhost")
 
+    # pause_event.set()
     drone_move_task = asyncio.ensure_future(move_drone(drone, path[1:], flying_altitude))
+    # moniter_task = asyncio.ensure_future(monitor_flight_mode(drone))
 
     # print(f"attempting to move drone to lat: {current_lat + 0.0005}, lon: {current_lon + 0.0005}, altitude: {flying_altitude}")
     # await drone.action.goto_location(current_lat + 0.0005, current_lon + 0.0005, flying_altitude, 0)
