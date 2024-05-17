@@ -16,7 +16,8 @@ import asyncio
 
 #global parameters_______________________________________________________________________________________
 #takeoff altitude in meters
-takeoff_altitude = 10
+takeoff_altitude = 2
+relative_fligth_altitude = 2
 home_altitude = 0.0
 current_altitude = 0.0
 current_lat = 0.0
@@ -314,7 +315,7 @@ async def run():
     print(f"start_lat: {start_lat}, start_lon: {start_lon}")
     end_lat = start_lat + 0.001
     end_lon = start_lon + 0.001
-    flying_altitude = home_altitude + 30.0
+    flying_altitude = home_altitude + relative_fligth_altitude
     sweeps = 3
     step_size = 0.0005
     path = await generate_path(start_lat, start_lon, end_lat, end_lon, sweeps, step_size)
