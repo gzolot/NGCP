@@ -20,6 +20,8 @@ import numpy as np
 #takeoff altitude in meters
 takeoff_altitude = 10
 home_altitude = 0.0
+
+#dynamically updated variables
 current_altitude = 0.0
 current_lat = 0.0
 current_lon = 0.0
