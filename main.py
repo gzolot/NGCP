@@ -115,12 +115,12 @@ async def initialize_drone():
     global takeoff_altitude
     global home_altitude
     #local initialization
-    drone = System()
-    await drone.connect(system_address="udp://:14540")
+    # drone = System()
+    # await drone.connect(system_address="udp://:14540")
 
     #nano initialization
-    # drone = System(mavsdk_server_address='localhost', port=50051)
-    # await drone.connect()
+    drone = System(mavsdk_server_address='localhost', port=50051)
+    await drone.connect()
 
     print("Waiting for drone to connect...")
     async for state in drone.core.connection_state():
