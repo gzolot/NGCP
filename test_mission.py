@@ -4,16 +4,21 @@ import asyncio
 
 from mavsdk import System
 from mavsdk.mission import (MissionItem, MissionPlan)
+MISSION = 4
+MANUAL = 9
+RTL = 5
+LAND = 6
+HOLD = 3
 
 
 async def run():
-    drone = System()
-    await drone.connect(system_address="udp://:14540")
+    # drone = System()
+    # await drone.connect(system_address="udp://:14540")
     
+    await asyncio.sleep(60)
     
-    
-    # drone = System(mavsdk_server_address='localhost', port=50051)
-    # await drone.connect()
+    drone = System(mavsdk_server_address='localhost', port=50051)
+    await drone.connect()
 
     print("Waiting for drone to connect...")
     async for state in drone.core.connection_state():
@@ -31,8 +36,9 @@ async def run():
         break
     
     start_lat, start_lon = position.latitude_deg, position.longitude_deg
-
+    drone.mission.clear_mission()
     mission_items = []
+    drone.action.set_takeoff_altitude(2)
     mission_items.append(MissionItem(start_lat + 0.0008,
                                      start_lon,
                                      2,
@@ -48,21 +54,7 @@ async def run():
                                      float('nan'),
                                      MissionItem.VehicleAction.NONE))
     mission_items.append(MissionItem(start_lat,
-                                     start_lon + 0.0005,
-                                     2,
-                                     10,
-                                     True,
-                                     float('nan'),
-                                     float('nan'),
-                                     MissionItem.CameraAction.NONE,
-                                     float('nan'),
-                                     float('nan'),
-                                     float('nan'),
-                                     float('nan'),
-                                     float('nan'),
-                                     MissionItem.VehicleAction.NONE))
-    mission_items.append(MissionItem(start_lat - 0.0005,
-                                     start_lon - 0.0005,
+                                     start_lon,
                                      2,
                                      10,
                                      True,
@@ -78,8 +70,6 @@ async def run():
 
     mission_plan = MissionPlan(mission_items)
 
-    await drone.mission.set_return_to_launch_after_mission(True)
-
     print("-- Uploading mission")
     await drone.mission.upload_mission(mission_plan)
 
@@ -92,12 +82,13 @@ async def run():
     print("-- Arming")
     await drone.action.arm()
     await drone.action.set_takeoff_altitude(2)
-    await drone.action.takeoff()
-    asyncio.sleep(5)
+    #await drone.action.takeoff()
+    await asyncio.sleep(5)
 
-    print("-- Starting mission")
-    await drone.mission.start_mission()
-
+   
+    
+    await monitor_flight_mode(drone)
+    await drone.action.land()
     await termination_task
 
 
@@ -107,7 +98,25 @@ async def print_mission_progress(drone):
               f"{mission_progress.current}/"
               f"{mission_progress.total}")
 
+async def monitor_flight_mode(drone):
+    previous_flight_mode = None
 
+    async for flight_mode in drone.telemetry.flight_mode():
+        if flight_mode != previous_flight_mode:
+            print(f"Flight mode changed to: {flight_mode}")
+            if flight_mode == MANUAL:
+                print("Flight mode changed from MISSION to MANUAL. Pausing mission...")
+                await drone.mission.pause_mission()
+            elif flight_mode == RTL:
+                break
+            elif flight_mode == HOLD:
+                drone.action.hold()
+            else:
+                await drone.mission.start_mission()
+            previous_flight_mode = flight_mode
+        if drone.mission.is_mission_finished():
+            break
+            
 async def observe_is_in_air(drone, running_tasks):
     """ Monitors whether the drone is flying or not and
     returns after landing """
