@@ -94,6 +94,22 @@ async def coordinate_producer(executor, result_queue):
         x, y = await loop.run_in_executor(executor, result_queue.get)
         await coordinate_queue.put((x, y))
 
+async def write_telemetry_data_tofile():
+    #write telemetry global data to text file
+    #initialize global telemetry data
+    global current_altitude
+    global current_lat
+    global current_lon
+    global current_pitch
+    global current_yaw
+    global current_roll
+    global current_speed
+    global current_battery
+    #create a new file
+    with open("telemetry_data.txt", "w") as file:
+        while(True):
+            file.write(f"current_lat: {current_lat}, current_lon: {current_lon}, current_altitude: {current_altitude}, current_pitch: {current_pitch}, current_yaw: {current_yaw}, current_roll: {current_roll}, current_speed: {current_speed}, current_battery: {current_battery}\n")
+            await asyncio.sleep(1)
 
 async def initialize_drone():
     global takeoff_altitude
@@ -122,6 +138,7 @@ async def initialize_drone():
     print_attitude_task = asyncio.ensure_future(print_attitude(drone))
     print_battery_and_speed_task = asyncio.ensure_future(print_battery_and_speed(drone))
     print_heading_task = asyncio.ensure_future(print_heading(drone))
+    write_telemetry_data_task = asyncio.ensure_future(write_telemetry_data_tofile())
     
     print("fetching amsl altitude at home location......")
     async for terrain_info in drone.telemetry.home():
@@ -292,6 +309,9 @@ async def run():
 
     #status_text_task = asyncio.create_task(print_status_text(drone))
 
+    #sleep for a minute
+    # await asyncio.sleep(60)
+
     print("-- Arming")
     await drone.action.arm()
 
@@ -309,7 +329,23 @@ async def run():
     #         break
     #wait for 10 seconds
     await asyncio.sleep(10)
-    
+
+    #flight test________________________________________________________________________________________
+    #home location
+    home_lat = current_lat
+    home_lon = current_lon
+
+    #move the drone 5 meters to the left
+    flying_altitude = home_altitude + relative_fligth_altitude
+    await drone.action.goto_location(current_lat, current_lon + 0.00005, flying_altitude, 0)
+    #wait for drone to move to that location
+    await asyncio.sleep(10)
+
+    #move drone to home location
+    await drone.action.goto_location(home_lat, home_lon, flying_altitude, 0)
+    #wait for drone to move to that location
+    await asyncio.sleep(10)
+    '''
     start_lat = current_lat
     start_lon = current_lon
     print(f"start_lat: {start_lat}, start_lon: {start_lon}")
@@ -327,12 +363,6 @@ async def run():
     #tel = TelemetryRabbitMQ("ERU", "localhost")
 
     drone_move_task = asyncio.ensure_future(move_drone(drone, path[1:], flying_altitude))
-
-    # print(f"attempting to move drone to lat: {current_lat + 0.0005}, lon: {current_lon + 0.0005}, altitude: {flying_altitude}")
-    # await drone.action.goto_location(current_lat + 0.0005, current_lon + 0.0005, flying_altitude, 0)
-    # while (1):
-    #     #do nothing
-    #     await asyncio.sleep(1)
 
     # infinite while loop that moves the drone to the next location on the path
     while True:
@@ -356,40 +386,15 @@ async def run():
         await asyncio.sleep(1)
         print(f"current_lat: {current_lat}, current_lon: {current_lon}, current_altitude: {current_altitude}, current_pitch: {current_pitch}, current_yaw: {current_yaw}, current_roll: {current_roll}, current_speed: {current_speed}, current_battery: {current_battery}")
 
-        # await move_to_next_location(drone, path, index, flying_altitude)
-        # index += 1
-        # if index == path_length:
-        #     break
-
-    # await move_drone(drone, path)
-
-
-    # #utilizing current location to move drone 5 meters to the left
-    # target_longitude = location.longitude_deg - 0.0005
-    # print(f"target_longitude: {target_longitude}")
-    # await drone.action.goto_location(location.latitude_deg, target_longitude, location.absolute_altitude_m, 0)
-
-    # #loop until drone reaches desired location
-    # margin_of_error = 0.00001  # Adjust as needed
-    # print("-- Waiting for drone to reach desired location")
-    # async for location in drone.telemetry.position():
-    #     if abs(location.longitude_deg - target_longitude) < margin_of_error:
-    #         break
 
     #print current drone location once
     async for location in drone.telemetry.position():
         print(f"-- Current Position: {location.latitude_deg}, {location.longitude_deg}")
         break
-
+'''
     print("-- Landing")
     await drone.action.land()
 
-    # status_text_task.cancel()
-    # try:
-    #     # Await the task to handle its cancellation
-    #     await status_text_task
-    # except asyncio.CancelledError:
-    #     print("-- print_status_text task cancelled")
 
 if __name__ == "__main__":
     asyncio.run(run())
