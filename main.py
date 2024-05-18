@@ -310,7 +310,7 @@ async def run():
     #status_text_task = asyncio.create_task(print_status_text(drone))
 
     #sleep for a minute
-    # await asyncio.sleep(60)
+    await asyncio.sleep(60)
 
     print("-- Arming")
     await drone.action.arm()
