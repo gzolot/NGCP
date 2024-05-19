@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 
 import asyncio
-
 from mavsdk import System
 from mavsdk.mission import (MissionItem, MissionPlan)
+import geofence
 MISSION = 4
 MANUAL = 9
 RTL = 5
@@ -12,13 +12,13 @@ HOLD = 3
 
 
 async def run():
-    # drone = System()
-    # await drone.connect(system_address="udp://:14540")
+    drone = System()
+    await drone.connect(system_address="udp://:14540")
     
-    await asyncio.sleep(60)
+    # await geofence.run()
     
-    drone = System(mavsdk_server_address='localhost', port=50051)
-    await drone.connect()
+    # drone = System(mavsdk_server_address='localhost', port=50051)
+    # await drone.connect()
 
     print("Waiting for drone to connect...")
     async for state in drone.core.connection_state():
@@ -34,12 +34,12 @@ async def run():
         observe_is_in_air(drone, running_tasks))
     async for position in drone.telemetry.position():
         break
-    
+    await drone.action.set_takeoff_altitude(2)
     start_lat, start_lon = position.latitude_deg, position.longitude_deg
     drone.mission.clear_mission()
     mission_items = []
     drone.action.set_takeoff_altitude(2)
-    mission_items.append(MissionItem(start_lat + 0.0008,
+    mission_items.append(MissionItem(start_lat - 0.00008,
                                      start_lon,
                                      2,
                                      10,
@@ -81,16 +81,15 @@ async def run():
 
     print("-- Arming")
     await drone.action.arm()
-    await drone.action.set_takeoff_altitude(2)
+    
     #await drone.action.takeoff()
-    await asyncio.sleep(5)
+    # await asyncio.sleep(5)
 
    
     
     await monitor_flight_mode(drone)
     await drone.action.land()
     await termination_task
-
 
 async def print_mission_progress(drone):
     async for mission_progress in drone.mission.mission_progress():
@@ -110,7 +109,7 @@ async def monitor_flight_mode(drone):
             elif flight_mode == RTL:
                 break
             elif flight_mode == HOLD:
-                drone.action.hold()
+                await drone.action.hold()
             else:
                 await drone.mission.start_mission()
             previous_flight_mode = flight_mode
