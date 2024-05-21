@@ -5,6 +5,7 @@ from mavsdk import System
 from mavsdk.mission import (MissionItem, MissionPlan)
 import geofence
 MISSION = 4
+STABILIZE = 13
 MANUAL = 9
 RTL = 5
 LAND = 6
@@ -37,10 +38,68 @@ async def run():
     await drone.action.set_takeoff_altitude(2)
     start_lat, start_lon = position.latitude_deg, position.longitude_deg
     drone.mission.clear_mission()
+    await drone.mission.set_return_to_launch_after_mission(True)
     mission_items = []
     drone.action.set_takeoff_altitude(2)
-    mission_items.append(MissionItem(start_lat - 0.00008,
-                                     start_lon,
+    # mission_items.append(MissionItem(start_lat - 0.0001,
+    #                                  start_lon,
+    #                                  2,
+    #                                  10,
+    #                                  True,
+    #                                  float('nan'),
+    #                                  float('nan'),
+    #                                  MissionItem.CameraAction.NONE,
+    #                                  float('nan'),
+    #                                  float('nan'),
+    #                                  float('nan'),
+    #                                  float('nan'),
+    #                                  float('nan'),
+    #                                  MissionItem.VehicleAction.NONE))
+    # mission_items.append(MissionItem(start_lat,
+    #                                  start_lon,
+    #                                  2,
+    #                                  10,
+    #                                  True,
+    #                                  float('nan'),
+    #                                  float('nan'),
+    #                                  MissionItem.CameraAction.NONE,
+    #                                  float('nan'),
+    #                                  float('nan'),
+    #                                  float('nan'),
+    #                                  float('nan'),
+    #                                  float('nan'),
+    #                                  MissionItem.VehicleAction.NONE))
+    # mission_items.append(MissionItem(start_lat,
+    #                                  start_lon + 0.0001,
+    #                                  2,
+    #                                  10,
+    #                                  True,
+    #                                  float('nan'),
+    #                                  float('nan'),
+    #                                  MissionItem.CameraAction.NONE,
+    #                                  float('nan'),
+    #                                  float('nan'),
+    #                                  float('nan'),
+    #                                  float('nan'),
+    #                                  float('nan'),
+    #                                  MissionItem.VehicleAction.NONE))
+    # mission_items.append(MissionItem(start_lat + 0.0001,
+    #                                  start_lon,
+    #                                  2,
+    #                                  10,
+    #                                  True,
+    #                                  float('nan'),
+    #                                  float('nan'),
+    #                                  MissionItem.CameraAction.NONE,
+    #                                  float('nan'),
+    #                                  float('nan'),
+    #                                  float('nan'),
+    #                                  float('nan'),
+    #                                  float('nan'),
+    #                                  MissionItem.VehicleAction.NONE))
+    
+    mission_items.append(MissionItem(35.328972, 
+                                     -120.752941,
                                      2,
                                      10,
                                      True,
@@ -53,8 +112,22 @@ async def run():
                                      float('nan'),
                                      float('nan'),
                                      MissionItem.VehicleAction.NONE))
-    mission_items.append(MissionItem(start_lat,
-                                     start_lon,
+    mission_items.append(MissionItem(35.328000, 
+                                     -120.751989,
+                                     2,
+                                     10,
+                                     True,
+                                     float('nan'),
+                                     float('nan'),
+                                     MissionItem.CameraAction.NONE,
+                                     float('nan'),
+                                     float('nan'),
+                                     float('nan'),
+                                     float('nan'),
+                                     float('nan'),
+                                     MissionItem.VehicleAction.NONE))
+    mission_items.append(MissionItem(35.328972, 
+                                     -120.752941,
                                      2,
                                      10,
                                      True,
@@ -80,15 +153,14 @@ async def run():
             break
 
     print("-- Arming")
+    await asyncio.sleep(30)
     await drone.action.arm()
     
     #await drone.action.takeoff()
     # await asyncio.sleep(5)
-
-   
+    # await drone.mission.start_mission()
     
     await monitor_flight_mode(drone)
-    await drone.action.land()
     await termination_task
 
 async def print_mission_progress(drone):
@@ -99,22 +171,31 @@ async def print_mission_progress(drone):
 
 async def monitor_flight_mode(drone):
     previous_flight_mode = None
+    flag = False
 
     async for flight_mode in drone.telemetry.flight_mode():
         if flight_mode != previous_flight_mode:
             print(f"Flight mode changed to: {flight_mode}")
-            if flight_mode == MANUAL:
+            if flight_mode.value == STABILIZE or flight_mode.value == MANUAL:
                 print("Flight mode changed from MISSION to MANUAL. Pausing mission...")
                 await drone.mission.pause_mission()
-            elif flight_mode == RTL:
-                break
-            elif flight_mode == HOLD:
+            # elif flight_mode == RTL:
+            #     break
+            elif flight_mode.value == HOLD:
+                print("switched to hold mode")
                 await drone.action.hold()
             else:
                 await drone.mission.start_mission()
             previous_flight_mode = flight_mode
-        if drone.mission.is_mission_finished():
+        async for mission_progress in drone.mission.mission_progress():
+        
+            if mission_progress.current == mission_progress.total:
+                await drone.action.land()
+                flag = True
             break
+        if flag is True:
+            break
+            
             
 async def observe_is_in_air(drone, running_tasks):
     """ Monitors whether the drone is flying or not and
