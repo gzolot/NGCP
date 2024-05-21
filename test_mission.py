@@ -3,7 +3,6 @@
 import asyncio
 from mavsdk import System
 from mavsdk.mission import (MissionItem, MissionPlan)
-import geofence
 MISSION = 4
 STABILIZE = 13
 MANUAL = 9
@@ -13,13 +12,13 @@ HOLD = 3
 
 
 async def run():
-    drone = System()
-    await drone.connect(system_address="udp://:14540")
+    #drone = System()
+    #await drone.connect(system_address="udp://:14540")
     
     # await geofence.run()
     
-    # drone = System(mavsdk_server_address='localhost', port=50051)
-    # await drone.connect()
+    drone = System(mavsdk_server_address='localhost', port=50051)
+    await drone.connect()
 
     print("Waiting for drone to connect...")
     async for state in drone.core.connection_state():
