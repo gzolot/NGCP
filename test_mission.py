@@ -37,7 +37,7 @@ async def run():
     await drone.action.set_takeoff_altitude(2)
     start_lat, start_lon = position.latitude_deg, position.longitude_deg
     drone.mission.clear_mission()
-    await drone.mission.set_return_to_launch_after_mission(True)
+    await drone.mission.set_return_to_launch_after_mission(False)
     mission_items = []
     drone.action.set_takeoff_altitude(2)
     # mission_items.append(MissionItem(start_lat - 0.0001,
@@ -127,6 +127,20 @@ async def run():
                                      MissionItem.VehicleAction.NONE))
     mission_items.append(MissionItem(35.328972, 
                                      -120.752941,
+                                     2,
+                                     10,
+                                     True,
+                                     float('nan'),
+                                     float('nan'),
+                                     MissionItem.CameraAction.NONE,
+                                     float('nan'),
+                                     float('nan'),
+                                     float('nan'),
+                                     float('nan'),
+                                     float('nan'),
+                                     MissionItem.VehicleAction.NONE))
+    mission_items.append(MissionItem(start_lat,
+                                     start_lon,
                                      2,
                                      10,
                                      True,
