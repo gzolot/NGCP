@@ -18,7 +18,7 @@ import math
 #global parameters_______________________________________________________________________________________
 #takeoff altitude in meters
 takeoff_altitude = 2
-relative_fligth_altitude = 2
+relative_flight_altitude = 2
 home_altitude = 0.0
 current_altitude = 0.0
 current_lat = 0.0
@@ -310,6 +310,8 @@ async def move_drone(drone, path, altitude):
         while True:
             # Use global variables updated by print_altitude
             global current_lat, current_lon
+
+            
             if abs(current_lat - coord[0]) < margin_of_error and abs(current_lon - coord[1]) < margin_of_error:
                 print(f"-- Drone reached ({current_lat}, {current_lon})")
                 break
@@ -386,7 +388,7 @@ async def run():
     home_lon = current_lon
 
     #move the drone 5 meters to the left
-    flying_altitude = home_altitude + relative_fligth_altitude
+    flying_altitude = home_altitude + relative_flight_altitude
     await drone.action.goto_location(current_lat, current_lon + 0.00005, flying_altitude, 0)
     #wait for drone to move to that location
     await asyncio.sleep(10)
@@ -401,7 +403,7 @@ async def run():
     print(f"start_lat: {start_lat}, start_lon: {start_lon}")
     end_lat = start_lat + 0.001
     end_lon = start_lon + 0.001
-    flying_altitude = home_altitude + relative_fligth_altitude
+    flying_altitude = home_altitude + relative_flight_altitude
     sweeps = 3
     step_size = 0.0005
     path = await generate_path(start_lat, start_lon, end_lat, end_lon, sweeps, step_size)
