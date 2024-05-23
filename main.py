@@ -10,10 +10,11 @@ import asyncio
 # import time
 
 #initialize computer vision object via roboflowoak
-# from roboflowoak import RoboflowOak
-# import cv2
-# import numpy as np
+from roboflowoak import RoboflowOak
+import cv2
+import numpy as np
 
+import math
 #global parameters_______________________________________________________________________________________
 #takeoff altitude in meters
 takeoff_altitude = 2
@@ -29,6 +30,56 @@ current_speed = 0.0
 current_battery = 0.0
 current_heading = 0.0
 found = False #global for predictions
+
+# This function determines the pixel per inch ratio at a given distance. 
+# We used inches as this was a convenient unit for measuring the 2x2 red square, 
+# and each tile in the EE bldg is exactly 12 inches for measuring distance. 
+def pixel_to_real_world_distance(altitude):
+    return 512.06 * (altitude ** -0.927)
+
+# altitude requires units of inches
+# lat/lon must be formatted (looks like this would require offset by 10^7 from pixhawk coords): 
+    # plane_lat = 35.2994616
+    # plane_lon = -120.6630686
+def get_coordinates(plane_latitude, plane_longitude, plane_bearing, altitude, target_x, target_y):
+    
+    earth_radius = 6371  # Earth's radius in kilometers
+
+    # center of 640x640 camera frame. 
+    frame_center_x = 320 
+    frame_center_y = 320
+
+    # Calculate real-world x and y distance of the square relative to the drone (center of camera frame)
+    pixel_distance_conversion = 1 / pixel_to_real_world_distance(altitude) * 0.0254 # 1/ (pixel per inch) * 0.0254 = meter per pixel
+    real_y_difference = pixel_distance_conversion * (target_y - frame_center_y)
+    real_x_difference = pixel_distance_conversion * (target_x - frame_center_x)
+
+    
+    square_theta = np.arctan2(real_y_difference, real_x_difference) # get angle of square vector in camera frame of reference
+    square_theta -= np.pi / 2  # adjust angle wrt plane nose (y-axis in camera frame of reference)
+    square_theta -= np.deg2rad(plane_bearing)  # offset by plane bearing to get square bearing wrt North
+
+    # Keep in range 0 to 2pi. This represents clockwise angle (bearing) from North
+    if square_theta < 0:
+        square_theta += 2 * np.pi
+
+    distance = np.sqrt(real_x_difference**2 + real_y_difference**2) / 1000  # Convert distance to kilometers
+
+    target_longitude, target_latitude = great_circle_target(
+        np.deg2rad(plane_longitude), np.deg2rad(plane_latitude), square_theta, distance, earth_radius
+    )
+
+    return np.rad2deg(target_longitude), np.rad2deg(target_latitude)
+
+# This function uses the great circle formula to obtain a destination coordinate 
+# given a starting coord, bearing, and distance
+def great_circle_target(lon1, lat1, bearing, dist, R):
+    lat2 = math.asin(math.sin(lat1) * math.cos(dist / R) + 
+                     math.cos(lat1) * math.sin(dist / R) * math.cos(bearing))
+    lon2 = lon1 + math.atan2(math.sin(bearing) * math.sin(dist / R) * math.cos(lat1),
+                             math.cos(dist / R) - math.sin(lat1) * math.sin(lat2))
+    return lon2, lat2
+
 
 def vision(result_queue):
     rf = RoboflowOak(model="redsquare-gwdyn", confidence=0.5, overlap=0.5,
@@ -150,7 +201,6 @@ async def initialize_drone():
     await drone.action.set_takeoff_altitude(takeoff_altitude)
     
     return drone
-
 
 async def print_altitude(drone):
     """ Prints the altitude when it changes """
