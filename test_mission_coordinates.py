@@ -2,7 +2,6 @@ import asyncio
 import numpy as np
 import math
 from mavsdk import System
-from mavsdk.mission import MissionItem, MissionPlan
 from roboflowoak import RoboflowOak
 import cv2
 import time
@@ -85,9 +84,8 @@ async def process_vision(rf, output_file):
 
             if p.json()['class'] == "RedSquare":
                 with open(output_file, "a") as file:
-                    file.write(f"Center X: {x}, Center Y: {y}, Width: {width}, Height: {height}\n")
-                    file.write(f"Target Coordinates: Latitude = {target_lat}, Longitude = {target_lon}\n")
-
+                    file.write(f"Target lat: {target_lat}, Target long: {target_lon}, Plane lat: {plane_lat}, Plane lon: {plane_lon}, plane alt: {plane_relative_alt}, plane bearing: {plane_bearing}, pixel coord x: {x}, pixel coord y: {y}\n")
+        
         cv2.imshow("frame", frame)
         if cv2.waitKey(1) == ord('q'):
             break
