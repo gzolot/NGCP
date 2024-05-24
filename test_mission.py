@@ -63,148 +63,6 @@ def great_circle_target(lon1, lat1, bearing, dist, R):
     return lon2, lat2
 
 
-if __name__ == '__main__':
-
-    # get this data from pixhawk:
-    print("\nTesting on data gathered on 5.20.24\n")
-    plane_lat =  35.2994636
-    plane_lon = -120.6630624
-    plane_bearing = 80.9
-    plane_relative_alt =  40 * 12 # convert to inches 
-
-    # Open the file in write mode
-    with open("output.txt", "w") as file:
-        # instantiating an object (rf) with the RoboflowOak module
-        rf = RoboflowOak(model="redsquare-gwdyn", confidence=0.50,
-                         overlap=0.5, version="1",
-                         api_key="N5Xs9o02pFDsaVc5pjcd", rgb=True, depth=False,
-                         device=None, device_name="NGCP", blocking=True)
-        
-        while True:
-            t0 = time.time()
-            result, frame, raw_frame, depth = rf.detect()  # verify size of capture frame is 640x640
-            predictions = result["predictions"]
-            
-            t = time.time() - t0
-            inference_time = 1 / t
-            print("INFERENCE TIME IN MS ", inference_time)
-            
-            # Write inference time to file
-            #file.write(f"INFERENCE TIME IN MS {inference_time}\n")
-            
-            for p in predictions:
-                x = p.json()['x']
-                y = p.json()['y']
-                width = p.json()['width']
-                height = p.json()['height']
-                print("Center X:", x, "Center Y:", y, "Width:", width, "Height:", height)
-                
-                target_lon, target_lat = get_coordinates(
-                    plane_lat, plane_lon, plane_bearing, plane_relative_alt, x, y
-                )
-
-                # Write predictions to file
-                if p.json()['class'] == "RedSquare":
-                    file.write(f"Center X: {x}, Center Y: {y}, Width: {width}, Height: {height}\n")
-            
-            cv2.imshow("frame", frame)
-            if cv2.waitKey(1) == ord('q'):
-                break
-
-# The file will be automatically closed when the with block is exited
-
-
-
-
-
-
-
-    ######################################
-
-    # data gathered on 5.20.24
-    print("\nTesting on data gathered on 5.20.24\n")
-    plane_lat =  35.2994636
-    plane_lon = -120.6630624
-
-    # Quadrant 1
-    square_x2 = 593.0
-    square_y2 = 152.0 
-    square_lat2 = 35.2994375
-    square_lon2 = -120.6630039
-    
-    target_lon, target_lat = get_coordinates(
-        plane_lat, plane_lon, plane_bearing, plane_relative_alt, square_x2, square_y2
-    )
-    print(f"\nPlane coordinates: Latitude = {plane_lat}, Longitude = {plane_lon}")
-    print(f"Target Coordinates as calculated: Latitude = {target_lat}, Longitude = {target_lon}")
-    print(f"Target Coordinates as measured: Latitude = {square_lat2}, Longitude = {square_lon2}")
-
-    # Quadrant 4
-    square_x3 = 577.0
-    square_y3 = 420.5
-    square_lat3 =  35.2994310
-    square_lon3 =  -120.66230195 
-
-    target_lon, target_lat = get_coordinates(
-        plane_lat, plane_lon, plane_bearing, plane_relative_alt, square_x3, square_y3
-    )
-    print(f"\nPlane coordinates: Latitude = {plane_lat}, Longitude = {plane_lon}")
-    print(f"Target Coordinates as calculated: Latitude = {target_lat}, Longitude = {target_lon}")
-    print(f"Target Coordinates as measured: Latitude = {square_lat3}, Longitude = {square_lon3}")
-
-
-    square_x4 = 86.0
-    square_y4 = 321.0
-    square_lat4 =  352994927
-    square_lon4 = -120.6630437
-    
-    target_lon, target_lat = get_coordinates(
-        plane_lat, plane_lon, plane_bearing, plane_relative_alt, square_x4, square_y4
-    )
-    print(f"\nPlane coordinates: Latitude = {plane_lat}, Longitude = {plane_lon}")
-    print(f"Target Coordinates as calculated: Latitude = {target_lat}, Longitude = {target_lon}")
-    print(f"Target Coordinates as measured: Latitude = {square_lat4}, Longitude = {square_lon4}")
-
-
-    square_x5 = 133.5
-    square_y5 = 59.0
-    square_lat5 =  35.2995012
-    square_lon5 =  -120.6630149 
-
-    target_lon, target_lat = get_coordinates(
-        plane_lat, plane_lon, plane_bearing, plane_relative_alt, square_x5, square_y5
-    )
-    print(f"\nPlane coordinates: Latitude = {plane_lat}, Longitude = {plane_lon}")
-    print(f"Target Coordinates as calculated: Latitude = {target_lat}, Longitude = {target_lon}")
-    print(f"Target Coordinates as measured: Latitude = {square_lat5}, Longitude = {square_lon5}")
-
-    square_x6 =  315.5
-    square_y6 =  45.0 
-    square_lat6 =  35.2994810
-    square_lon6 =  -120.6630268
-
-    target_lon, target_lat = get_coordinates(
-        plane_lat, plane_lon, plane_bearing, plane_relative_alt, square_x6, square_y6
-    )
-    print(f"\nPlane coordinates: Latitude = {plane_lat}, Longitude = {plane_lon}")
-    print(f"Target Coordinates as calculated: Latitude = {target_lat}, Longitude = {target_lon}")
-    print(f"Target Coordinates as measured: Latitude = {square_lat6}, Longitude = {square_lon6}")
-
-
-    square_x7 =  353.0
-    square_y7 = 217.5 
-    square_lat7 = 35.2994619
-    square_lon7 =  -120.6630570 
-
-    target_lon, target_lat = get_coordinates(
-        plane_lat, plane_lon, plane_bearing, plane_relative_alt, square_x7, square_y7
-    )
-    print(f"\nPlane coordinates: Latitude = {plane_lat}, Longitude = {plane_lon}")
-    print(f"Target Coordinates as calculated: Latitude = {target_lat}, Longitude = {target_lon}")
-    print(f"Target Coordinates as measured: Latitude = {square_lat7}, Longitude = {square_lon7}")
-
-
-
 
 MISSION = 4
 STABILIZE = 13
@@ -214,12 +72,65 @@ LAND = 6
 HOLD = 3
 
 
+def vision():
+    rf = RoboflowOak(model="redsquare-gwdyn", confidence=0.5, overlap=0.5,
+    version="1", api_key="N5Xs9o02pFDsaVc5pjcd", rgb=True,
+    depth=False, device=None, device_name="FRA", blocking=True)
+    # Running our model and displaying the video output with detections
+    timefound = 0
+    while True:
+        #t0 = time.time()
+        # The rf.detect() function runs the model inference
+        result, frame, raw_frame, depth = rf.detect()
+        predictions = result["predictions"]
+
+        #update the x and y coordinates:
+        x,y = 100, 200
+        #{
+        #    predictions:
+        #    [ {
+        #        x: (middle),
+        #        y:(middle),
+        #        width: ,
+        #        height: ,
+        #        depth: ###->,
+        #        confidence: ,
+        #        class: ,
+        #        mask: { }
+        #       }
+        #    ]
+        #}
+        #To access specific values within "predictions" use: [p.json() for p[a] in predictions]
+        # set "a" to the index value you are attempting to access
+        # Example: accessing the "y"-value: [p.json() for p[1] in predictions]
+        
+        # timing: for benchmarking purposes
+        # t = time.time()-t0
+        # print("FPS ", 1/t)
+        #print("PREDICTIONS ", [p.json() for p in predictions])
+        if predictions is not None:
+            if found is True:
+                timefound+=1
+            found = True
+        elif predictions is None:
+            found = False
+            timefound = 0
+        # setting parameters for depth calculation
+        #max_depth = np.amax(depth)
+        #cv2.imshow("depth", depth/max_depth)
+        # displaying the video feed as successive frames
+        #cv2.imshow("frame", frame)
+    
+        # how to close the OAK inference window / stop inference: CTRL+q or CTRL+c
+        if cv2.waitKey(1) == ord('q'):
+            break
+
 async def run():
     #drone = System()
     #await drone.connect(system_address="udp://:14540")
-    
     # await geofence.run()
-    
+
+    #i think this stuff is to arm the drone?
     drone = System(mavsdk_server_address='localhost', port=50051)
     await drone.connect()
 
@@ -435,6 +346,56 @@ async def observe_is_in_air(drone, running_tasks):
             return
 
 
+
 if __name__ == "__main__":
     # Run the asyncio loop
     asyncio.run(run())
+
+    # get this data from pixhawk:
+    print("\nTesting on data gathered on 5.20.24\n")
+    plane_lat =  35.2994636
+    plane_lon = -120.6630624
+    plane_bearing = 80.9
+    plane_relative_alt =  40 * 12 # convert to inches 
+
+    # Open the file in write mode
+    with open("output.txt", "w") as file:
+        # instantiating an object (rf) with the RoboflowOak module
+        rf = RoboflowOak(model="redsquare-gwdyn", confidence=0.50,
+                         overlap=0.5, version="1",
+                         api_key="N5Xs9o02pFDsaVc5pjcd", rgb=True, depth=False,
+                         device=None, device_name="NGCP", blocking=True)
+        
+        while True:
+            t0 = time.time()
+            result, frame, raw_frame, depth = rf.detect()  # verify size of capture frame is 640x640
+            predictions = result["predictions"]
+            
+            t = time.time() - t0
+            inference_time = 1 / t
+            print("INFERENCE TIME IN MS ", inference_time)
+            
+            # Write inference time to file
+            #file.write(f"INFERENCE TIME IN MS {inference_time}\n")
+            
+            for p in predictions:
+                x = p.json()['x']
+                y = p.json()['y']
+                width = p.json()['width']
+                height = p.json()['height']
+                print("Center X:", x, "Center Y:", y, "Width:", width, "Height:", height)
+                
+                target_lon, target_lat = get_coordinates(
+                    plane_lat, plane_lon, plane_bearing, plane_relative_alt, x, y
+                )
+
+                # Write predictions to file
+                if p.json()['class'] == "RedSquare":
+                    file.write(f"Center X: {x}, Center Y: {y}, Width: {width}, Height: {height}\n")
+            
+            cv2.imshow("frame", frame)
+            if cv2.waitKey(1) == ord('q'):
+                break
+
+# The file will be automatically closed when the with block is exited
+
