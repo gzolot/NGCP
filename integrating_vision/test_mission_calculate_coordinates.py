@@ -87,14 +87,17 @@ async def process_vision(rf, output_file, drone):
                 y = p.json()['y']
                 width = p.json()['width']
                 height = p.json()['height']
-                print("Center X:", x, "Center Y:", y, "Width:", width, "Height:", height)
+                #print("Center X:", x, "Center Y:", y, "Width:", width, "Height:", height)
 
                 target_lon, target_lat = get_coordinates(
                     plane_lat, plane_lon, plane_bearing, plane_relative_alt, x, y
                 )
-                print(f"Target lat: {target_lat}, Target long: {target_lon}, Plane lat: {plane_lat}, Plane lon: {plane_lon}, plane alt: {plane_relative_alt}, plane bearing: {plane_bearing}, pixel coord x: {x}, pixel coord y: {y}\n")
+                print(f"Target lat: {target_lat}, Target long: {target_lon}, Plane lat: {plane_lat}, Plane lon: {plane_lon}, plane alt: {plane_relative_alt}, plane bearing: {plane_bearing}, pixel center coord x: {x}, pixel center coord y: {y}\n")
+                
                 # Open the file in write mode
                 # with open("output.txt", "w") as file:
+                
+                # append to file if exists, else write to new file.
                 with open(output_file, "a") as file:
                     file.write(f"Target lat: {target_lat}, Target long: {target_lon}, Plane lat: {plane_lat}, Plane lon: {plane_lon}, plane alt: {plane_relative_alt}, plane bearing: {plane_bearing}, pixel coord x: {x}, pixel coord y: {y}\n")
 
@@ -118,10 +121,12 @@ async def run():
             print("-- Global position estimate OK")
             break
 
-    print("-- Arming")
-    await asyncio.sleep(30)
-    await drone.action.arm()
-    await drone.action.set_takeoff_altitude(2)
+    # Commented out arming stuff
+
+    # print("-- Arming")
+    # await asyncio.sleep(30)
+    # await drone.action.arm()
+    # await drone.action.set_takeoff_altitude(2)
     
     # Output file for detected coordinates
     output_file = "output.txt"
